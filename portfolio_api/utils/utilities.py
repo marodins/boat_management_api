@@ -3,9 +3,12 @@ from flask import Response
 import json
 
 
-def make_self_link(item, base, segment=0):
+def make_self_link(item, base, segment=0, kind=None):
     url = base.rsplit('/', segment)[0]
-    item["self"] = f'{url}/{item.id}'
+    entity_id = item.id if item.id else item["id"]
+    if kind:
+        url += '/' + kind
+    item["self"] = f'{url}/{entity_id}'
 
 
 def make_res(data, code, content_type='application/json'):

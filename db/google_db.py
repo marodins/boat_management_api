@@ -48,6 +48,10 @@ class DataAccess(object):
             self.entity.update(data)
         self._db.put(self.entity)
 
+    def get_all(self):
+        query = self._db.query(kind=self.kind, namespace=self.namespace)
+        return list(query.fetch())
+
     def get_all_filtered(self, filter:tuple=None):
         """ retrieves all entities with the given kind in namespace"""
         query = self._db.query(kind=self.kind, namespace=self.namespace)
@@ -55,7 +59,7 @@ class DataAccess(object):
             query.add_filter(filter[0], filter[1], filter[2])
         return query.fetch()
 
-    def get_all_paginated(self, limit=3, start_cursor=None):
+    def get_all_paginated(self, limit=5, start_cursor=None):
         """ retrieves entities based on limit and cursor """
         query = self._db.query(kind=self.kind, namespace=self.namespace)
         if start_cursor:
