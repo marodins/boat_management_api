@@ -1,0 +1,6 @@
+#!/bin/bash
+source env/bin/activate
+set -o allexport
+source portfolio_api/.env
+set +o allexport
+python3 main.py

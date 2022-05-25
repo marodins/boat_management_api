@@ -1,0 +1,19 @@
+from flask import Response
+import json
+
+
+class Halt(Exception):
+
+    def __init__(self, err: str, code: int):
+        self.err = {"error": err}
+        self.code = code
+
+
+def any_error(err):
+    res = Response()
+    res.status_code = err.code
+    res.data = json.dumps(err.err)
+    res.content_type = 'application/json'
+    return res
+
+
