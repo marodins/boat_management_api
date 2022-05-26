@@ -1,16 +1,15 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 from portfolio_api.utils.errors import Halt
 from db.google_db import DataAccess
 from portfolio_api.utils.utilities import make_res, make_self_link
+from portfolio_api.utils.closures import paginate
 
 bp = Blueprint('loads', __name__, url_prefix='/loads')
 
 
 @bp.route('', methods=["GET", "POST"])
+@paginate('load', 'loads', DataAccess)
 def add_get_loads():
-    # paginate
-    # self-links
-    # total count
     load = DataAccess(kind="load", namespace="loads")
     res = None
     if request.method == 'POST':
@@ -34,7 +33,22 @@ def add_get_loads():
             raise Halt('missing attribute', 400)
 
     if request.method == 'GET':
-        pass
+        data = g.data["data"]
+        next_link = g.data["next_link"]
+        count = g.data["total_count"]
+        # create self links
+        for load in data:
+            make_self_link(load, request.base_url)
+            if load["boat"]:
+                make_self_link(load["boat"], request.base_url, segment=1,
+                               kind='boats')
+        res_data = {
+            "self": request.url,
+            "loads": data,
+            "next": next_link,
+            "total_count": count
+        }
+        res = make_res(res_data, 200)
 
     return res
 

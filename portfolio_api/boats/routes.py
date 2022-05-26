@@ -3,7 +3,7 @@ import json
 from flask import Blueprint, request, Response, g
 from db.google_db import DataAccess
 from portfolio_api.utils.errors import Halt
-from portfolio_api.utils.utilities import make_self_link, make_res
+from portfolio_api.utils.utilities import make_self_link, make_res, delete_load_on_boat
 from portfolio_api.utils.closures import paginate
 
 bp = Blueprint('boats', __name__, url_prefix='/boats')
@@ -30,7 +30,7 @@ def add_get_boat():
         # ensure boat does not already exist
         if len(list(boat.get_all_filtered(('name', '=', boat_add["name"])))) \
                 > 0:
-            raise Halt('boat name already exists', 403)
+            raise Halt('a boat with this name already exists', 403)
         # add the boat
         boat.add_entity(boat_add)
         boat.entity["id"] = boat.entity.id
@@ -62,27 +62,64 @@ def add_get_boat():
 @bp.route('/<bid>', methods=["GET", "PUT", "PATCH", "DELETE"])
 def get_mod_boat(bid):
     # modifying a boat that belongs to a user required jwt
-    pass
+    boat = DataAccess(kind='boat', namespace='boats', eid=bid)
+    try:
+        # ensure boat exists
+        boat.get_single_entity()
+        boat.entity["id"] = boat.entity.id
+    except ValueError:
+        raise Halt('boat or load does not exist', 404)
+
+    # ensure valid jwt and boat belongs to user with jwt
+    if request.method == 'GET':
+        pass
+    if request.method == 'PUT':
+        data = request.json
+        boat_name = data.get('name')
+        name_exists(boat_name, boat.entity["name"])
+        boat.update_only_single(data)
+    if request.method == 'PATCH':
+        data = request.json
+        boat_name = data.get("name")
+        name_exists(boat_name, boat.entity["name"])
+        boat.update_only_single(data)
+    if request.method == 'DELETE':
+        boat.delete_entity(get=False)
+        return '', 204
+
+    boat.entity["self"] = request.url
+    make_self_link(boat.entity["loads"], request.base_url, segment=2,
+                   kind='loads')
+    return make_res(boat.entity, 200)
+
+
+def name_exists(boat_name, cur_name):
+    # if name to be changed
+    if boat_name != cur_name:
+        is_boat = DataAccess(kind='boat', namespace='boats')
+        result = list(is_boat.get_all_filtered(('name', '=', boat_name)))
+        if len(result) > 0:
+            raise Halt('a boat with this name already exists', 403)
 
 
 @bp.route('/<bid>/loads/<lid>', methods=["PUT", "DELETE"])
 def add_remove_load(bid, lid):
-    res = None
     boat = DataAccess(kind='boat', namespace='boats', eid=bid)
     load = DataAccess(kind='load', namespace='loads', eid=lid)
+    try:
+        # ensure both boat and load exist
+        boat.get_single_entity()
+        load.get_single_entity()
+        load.entity["id"] = load.entity.id
+        boat.entity["id"] = boat.entity.id
+    except ValueError:
+        raise Halt('boat or load does not exist', 404)
+
     if request.method == 'PUT':
-        try:
-            # ensure both boat and load exist
-            boat.get_single_entity()
-            load.get_single_entity()
-            load.entity["id"] = load.entity.id
-            boat.entity["id"] = boat.entity.id
-        except ValueError:
-            raise Halt('boat or load does not exist', 404)
 
         # ensure load isn't on another boat
         if load.entity["boat"] is not None:
-            raise Halt('load is already on another boat', 400)
+            raise Halt('this load is not on this boat', 400)
         all_loads = boat.entity["loads"]
         all_loads.append({
             "id": load.entity.id,
@@ -98,6 +135,18 @@ def add_remove_load(bid, lid):
             "type": boat.entity["type"],
             "length": boat.entity["length"]
         }})
-        res = '', 204
+
+    if request.method == 'DELETE':
+        # ensure the load is on this boat
+        boat_id = load.entity["boat"].get('id')
+        # load not on this boat
+        if str(boat_id) != str(bid):
+            raise Halt('this load is not on this boat', 400)
+        delete_load_on_boat(lid, boat, error=False)
+        load.entity["boat"] = None
+        boat.update_only_single()
+        load.update_only_single()
+    res = '', 204
     return res
+
 

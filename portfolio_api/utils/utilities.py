@@ -5,10 +5,14 @@ import json
 
 def make_self_link(item, base, segment=0, kind=None):
     url = base.rsplit('/', segment)[0]
-    entity_id = item.id if item.id else item["id"]
     if kind:
         url += '/' + kind
-    item["self"] = f'{url}/{entity_id}'
+    if isinstance(item, list):
+        for ob in item:
+            ob["self"] = f'{url}/{ob["id"]}'
+    else:
+        entity_id = item.id if item.id else item["id"]
+        item["self"] = f'{url}/{entity_id}'
 
 
 def make_res(data, code, content_type='application/json'):
@@ -49,15 +53,8 @@ def delete_boat_from_load(loads: list):
     return ready
 
 
-def find_item_in(all_objects, bid):
-    find = None
-    for item in all_objects:
-        if item["id"] == bid:
-            find = item
-
-    return find
-
-
 def make_next_link(base, token, limit):
     """ makes the next link string for pagination """
     return f"{base}?limit={limit}&page_token={token}"
+
+
