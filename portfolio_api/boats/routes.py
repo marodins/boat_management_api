@@ -83,10 +83,13 @@ def get_mod_boat(bid):
         boat_name = data.get("name")
         name_exists(boat_name, boat.entity["name"])
         boat.update_only_single(data)
+
     if request.method == 'DELETE':
         boat.delete_entity(get=False)
+        update_loads_boat(boat.entity["loads"], boat)
         return '', 204
 
+    update_loads_boat(boat.entity["loads"], boat)
     boat.entity["self"] = request.url
     make_self_link(boat.entity["loads"], request.base_url, segment=2,
                    kind='loads')
@@ -100,6 +103,26 @@ def name_exists(boat_name, cur_name):
         result = list(is_boat.get_all_filtered(('name', '=', boat_name)))
         if len(result) > 0:
             raise Halt('a boat with this name already exists', 403)
+
+
+def update_loads_boat(boat_loads, boat):
+    if request.method == 'PUT' or request.method == 'PATCH':
+        with boat.get_db_instance().transaction():
+            for load in boat_loads:
+                cur = DataAccess(kind='load', namespace='loads', eid=load["id"])
+                cur.get_single_entity()
+                load_boat_ob = boat.entity.copy()
+                load_boat_ob.pop('loads')
+                cur.entity["boat"] = load_boat_ob
+                cur.update_only_single()
+
+    if request.method == "DELETE":
+        with boat.get_db_instance().transaction():
+            for load in boat_loads:
+                cur = DataAccess(kind='load', namespace='loads', eid=load["id"])
+                cur.get_single_entity()
+                cur.entity["boat"] = None
+                cur.update_only_single()
 
 
 @bp.route('/<bid>/loads/<lid>', methods=["PUT", "DELETE"])
