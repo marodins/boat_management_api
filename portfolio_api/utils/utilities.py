@@ -23,24 +23,13 @@ def make_res(data, code, content_type='application/json'):
     return res
 
 
-def delete_load_on_boat(lid, boat, error=True):
-    """
-    deletes a load from a boat instance raises error if load was not found
-    only if error is True
-    :param lid: load id
-    :param boat: boat instance of DataAccess type
-    :param error: bool-if error needs to be raised when no load on boat found
-    :return: None
-    """
-    for load in boat.entity["loads"]:
-        if str(lid) == str(load["id"]):
-            boat.entity["loads"].remove(load)
-            return
-    if error:
-        raise ValueError
+def find_load_on_boat(boat, lid):
+    for load in boat["loads"]:
+        if str(load["id"]) == str(lid):
+            return load
 
 
-def delete_boat_from_load(loads: list):
+def update_loads_on_boat(loads: list):
     """
     prepares list of loads that need to be updated due to
     removal from boat

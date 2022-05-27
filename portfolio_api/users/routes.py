@@ -13,8 +13,6 @@ def get_all():
     for user in data:
         for boat in user["boats"]:
             make_self_link(boat, request.base_url, segment=1, kind='boats')
-            for load in boat["loads"]:
-                make_self_link(load, request.base_url, segment=1, kind='loads')
 
     res_data = {
         "self": request.url,

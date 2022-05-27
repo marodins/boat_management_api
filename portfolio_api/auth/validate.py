@@ -60,6 +60,8 @@ def validating(errors=False):
                 error = Halt("no authorization header provided", 401)
             except ValueError:
                 error = Halt("token or 'bearer' missing ", 401)
+            except AttributeError:
+                error = Halt("token is missing", 401)
             except Halt as res_error:
                 error = res_error
             except Exception as e:
