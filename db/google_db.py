@@ -52,16 +52,19 @@ class DataAccess(object):
         query = self._db.query(kind=self.kind, namespace=self.namespace)
         return list(query.fetch())
 
-    def get_all_filtered(self, filter:tuple=None):
+    def get_all_filtered(self, all_filters: list):
         """ retrieves all entities with the given kind in namespace"""
         query = self._db.query(kind=self.kind, namespace=self.namespace)
-        if filter:
-            query.add_filter(filter[0], filter[1], filter[2])
+        for qfilter in all_filters:
+            query.add_filter(qfilter[0], qfilter[1], qfilter[2])
         return query.fetch()
 
-    def get_all_paginated(self, limit=5, start_cursor=None):
+    def get_all_paginated(self, limit=5, start_cursor=None, qfilter: tuple =
+    None):
         """ retrieves entities based on limit and cursor """
         query = self._db.query(kind=self.kind, namespace=self.namespace)
+        if qfilter:
+            query.add_filter(qfilter[0], qfilter[1], qfilter[2])
         if start_cursor:
             return query.fetch(start_cursor=start_cursor, limit=limit)
         else:

@@ -2,13 +2,12 @@ from flask import Blueprint, request, g
 from portfolio_api.utils.errors import Halt
 from db.google_db import DataAccess
 from portfolio_api.utils.utilities import make_res, make_self_link
-from portfolio_api.utils.closures import paginate
+from portfolio_api.utils.paginate import paginate
 
 bp = Blueprint('loads', __name__, url_prefix='/loads')
 
 
 @bp.route('', methods=["GET", "POST"])
-@paginate('load', 'loads', DataAccess)
 def add_get_loads():
     load = DataAccess(kind="load", namespace="loads")
     res = None
@@ -33,9 +32,7 @@ def add_get_loads():
             raise Halt('missing attribute', 400)
 
     if request.method == 'GET':
-        data = g.data["data"]
-        next_link = g.data["next_link"]
-        count = g.data["total_count"]
+        data, next_link, count = paginate(load)
         # create self links
         for load in data:
             make_self_link(load, request.base_url)

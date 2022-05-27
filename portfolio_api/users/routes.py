@@ -1,25 +1,27 @@
-from flask import Blueprint
-
+from flask import Blueprint, request
+from db.google_db import DataAccess
+from portfolio_api.utils.paginate import paginate
+from portfolio_api.utils.utilities import make_self_link, make_res
 bp = Blueprint('users', __name__, url_prefix='/users')
 
 
 @bp.route('', methods=["GET"])
 def get_all():
-    # paginate
-    # self-links
-    # total count
-    pass
+    users = DataAccess(kind='user', namespace='users')
+    data = users.get_all()
+    # create self links
+    for user in data:
+        for boat in user["boats"]:
+            make_self_link(boat, request.base_url, segment=1, kind='boats')
+            for load in boat["loads"]:
+                make_self_link(load, request.base_url, segment=1, kind='loads')
 
+    res_data = {
+        "self": request.url,
+        "users": data
+    }
+    return make_res(res_data, 200)
 
-@bp.route('/<uid>', methods=["GET", "PUT", "PATCH", "DELETE"])
-def mod_get(uid):
-    pass
-
-
-@bp.route('/<uid>/boats/<bid>', methods=["PUT", "PATCH", "DELETE"])
-def mod_user_boat(uid, bid):
-    # put adds a boat to users boats
-    pass
 
 
 

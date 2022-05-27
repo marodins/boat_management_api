@@ -1,0 +1,32 @@
+h1{
+    color: darkseagreen;
+    size: 30px;
+}
+h2{
+    color: #11557C;
+    size: 30px;
+}
+
+dl{
+    list-style: none;
+}
+dd{
+    font-size: 18px;
+    color: #444444;
+}
+dt{
+    color: darkblue;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#div1{
+    display: inline-block;
+    text-align: left;
+    overflow-wrap: break-word;
+    inline-size: 500px;
+}
+
+body{
+    text-align: center;
+}

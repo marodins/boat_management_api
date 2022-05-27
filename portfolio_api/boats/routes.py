@@ -4,51 +4,64 @@ from flask import Blueprint, request, Response, g
 from db.google_db import DataAccess
 from portfolio_api.utils.errors import Halt
 from portfolio_api.utils.utilities import make_self_link, make_res, delete_load_on_boat
-from portfolio_api.utils.closures import paginate
+from portfolio_api.utils.paginate import paginate
+from portfolio_api.auth.validate import validating
 
 bp = Blueprint('boats', __name__, url_prefix='/boats')
 
 
 @bp.route('', methods=["GET", "POST"])
-@paginate('boat', 'boats', DataAccess)
+@validating(errors=True)
 def add_get_boat():
     res = Response()
+    sub = g.jwt_payload["sub"]
+    boat = DataAccess(kind='boat', namespace='boats')
+    user = DataAccess(kind='user', namespace='users')
+    print(sub)
     if request.method == 'POST':
+
         data = request.json
         try:
             boat_add = {
                 "name": data["name"],
                 "type": data["type"],
                 "length": data["length"],
-                "user": None,
+                "user": sub,
                 "loads": []
             }
-            boat = DataAccess(kind='boat', namespace='boats')
-
         except KeyError:
             raise Halt('missing required property', 400)
         # ensure boat does not already exist
-        if len(list(boat.get_all_filtered(('name', '=', boat_add["name"])))) \
-                > 0:
+        if len(
+                list(boat.get_all_filtered(
+                    [('name', '=', boat_add["name"])]
+                    )
+                )
+        ) > 0:
             raise Halt('a boat with this name already exists', 403)
         # add the boat
         boat.add_entity(boat_add)
         boat.entity["id"] = boat.entity.id
+        # get user in db and update boats property
+        user.entity = list(user.get_all_filtered([('sub', '=', sub)])).pop()
+        user.entity["boats"].append(boat.entity)
+        user.update_only_single()
+
         make_self_link(boat.entity, request.base_url)
         res = make_res(boat.entity, 201)
     if request.method == 'GET':
-        data = g.data["data"]
-        next_link = g.data["next_link"]
-        count = g.data["total_count"]
+        data, next_link, count = paginate(
+            boat,
+            use_filter=[('user', '=', sub)]
+        )
         # create self links
         for boat in data:
             for load in boat["loads"]:
                 make_self_link(load, request.base_url, segment=1, kind='loads')
         for boat in data:
             make_self_link(boat, request.base_url)
-            if boat["user"]:
-                make_self_link(boat["user"], request.base_url, segment=1,
-                               kind='users')
+            make_self_link(boat["user"], request.base_url, segment=1,
+                           kind='users')
         res_data = {
             "self": request.url,
             "boats": data,
@@ -60,19 +73,28 @@ def add_get_boat():
 
 
 @bp.route('/<bid>', methods=["GET", "PUT", "PATCH", "DELETE"])
+@validating(errors=True)
 def get_mod_boat(bid):
     # modifying a boat that belongs to a user required jwt
     boat = DataAccess(kind='boat', namespace='boats', eid=bid)
+    user_id = g.jwt_payload["sub"]
     try:
         # ensure boat exists
         boat.get_single_entity()
         boat.entity["id"] = boat.entity.id
     except ValueError:
         raise Halt('boat or load does not exist', 404)
-
     # ensure valid jwt and boat belongs to user with jwt
+    if boat.entity["user"] != user_id:
+        raise Halt('user is not authorized to access this boat', 401)
+
     if request.method == 'GET':
-        pass
+        return make_res(boat.entity, 200)
+    if request.method == 'DELETE':
+        boat.delete_entity(get=False)
+        update_loads_boat(boat.entity["loads"], boat)
+        return '', 204
+
     if request.method == 'PUT':
         data = request.json
         boat_name = data.get('name')
@@ -83,11 +105,6 @@ def get_mod_boat(bid):
         boat_name = data.get("name")
         name_exists(boat_name, boat.entity["name"])
         boat.update_only_single(data)
-
-    if request.method == 'DELETE':
-        boat.delete_entity(get=False)
-        update_loads_boat(boat.entity["loads"], boat)
-        return '', 204
 
     update_loads_boat(boat.entity["loads"], boat)
     boat.entity["self"] = request.url
@@ -100,7 +117,7 @@ def name_exists(boat_name, cur_name):
     # if name to be changed
     if boat_name != cur_name:
         is_boat = DataAccess(kind='boat', namespace='boats')
-        result = list(is_boat.get_all_filtered(('name', '=', boat_name)))
+        result = list(is_boat.get_all_filtered([('name', '=', boat_name)]))
         if len(result) > 0:
             raise Halt('a boat with this name already exists', 403)
 
@@ -126,6 +143,7 @@ def update_loads_boat(boat_loads, boat):
 
 
 @bp.route('/<bid>/loads/<lid>', methods=["PUT", "DELETE"])
+@validating()
 def add_remove_load(bid, lid):
     boat = DataAccess(kind='boat', namespace='boats', eid=bid)
     load = DataAccess(kind='load', namespace='loads', eid=lid)
