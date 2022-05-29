@@ -3,7 +3,7 @@ from portfolio_api.boats.routes import bp as boatbp
 from portfolio_api.users.routes import bp as userbp
 from portfolio_api.loads.routes import bp as loadsbp
 from portfolio_api.auth.routes import bp as authbp
-from portfolio_api.utils.errors import Halt, any_error
+from portfolio_api.utils.errors import Halt, any_error, method_error
 from portfolio_api.config import *
 
 
@@ -16,6 +16,7 @@ def app_create():
     app.register_blueprint(authbp)
 
     app.register_error_handler(Halt, any_error)
+    app.register_error_handler(405, method_error)
 
     from portfolio_api.auth import oauth
     oauth.init_app(app)

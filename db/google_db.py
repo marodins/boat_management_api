@@ -59,12 +59,13 @@ class DataAccess(object):
             query.add_filter(qfilter[0], qfilter[1], qfilter[2])
         return query.fetch()
 
-    def get_all_paginated(self, limit=5, start_cursor=None, qfilter: tuple =
+    def get_all_paginated(self, limit=5, start_cursor=None, all_filters: list =
     None):
         """ retrieves entities based on limit and cursor """
         query = self._db.query(kind=self.kind, namespace=self.namespace)
-        if qfilter:
-            query.add_filter(qfilter[0], qfilter[1], qfilter[2])
+        if all_filters:
+            for qfilter in all_filters:
+                query.add_filter(qfilter[0], qfilter[1], qfilter[2])
         if start_cursor:
             return query.fetch(start_cursor=start_cursor, limit=limit)
         else:

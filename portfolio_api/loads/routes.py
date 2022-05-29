@@ -3,11 +3,14 @@ from portfolio_api.utils.errors import Halt
 from db.google_db import DataAccess
 from portfolio_api.utils.utilities import make_res, make_self_link, find_load_on_boat
 from portfolio_api.utils.paginate import paginate
+from portfolio_api.utils.headers_validate import accept_validate_parent
+from portfolio_api.auth.validate import validating
 
 bp = Blueprint('loads', __name__, url_prefix='/loads')
 
 
 @bp.route('', methods=["GET", "POST"])
+@accept_validate_parent()
 def add_get_loads():
     load = DataAccess(kind="load", namespace="loads")
     res = None
@@ -50,6 +53,7 @@ def add_get_loads():
 
 
 @bp.route('/<lid>', methods=["GET", "PUT", "PATCH", "DELETE"])
+@validating()
 def specific_load(lid):
     load = DataAccess(kind='load', namespace='loads', eid=lid)
     res = None
@@ -60,10 +64,22 @@ def specific_load(lid):
 
     if request.method == 'GET':
         res = get_load(load)
-    if request.method == 'PUT' or request.method == 'PATCH':
-        res = update_loads_boat(load, lid)
-    if request.method == 'DELETE':
-        res = delete_and_update(load, lid)
+    else:
+        # if load is on a boat require jwt for write operation
+        if load.entity["boat"]:
+            if not g.error:
+                sub = g.jwt_payload["sub"]
+                if load.entity["boat"]["id"] != sub:
+                    raise Halt('this load is on a boat, invalid token for '
+                               'boat owner', 401)
+            # if error exists
+            else:
+                raise Halt('this load is on a boat, please provide auth '
+                           'token', 401)
+        if request.method == 'PUT' or request.method == 'PATCH':
+            res = update_loads_boat(load, lid)
+        if request.method == 'DELETE':
+            res = delete_and_update(load, lid)
 
     return res
 
@@ -87,9 +103,9 @@ def update_loads_boat(load, lid):
             eid=load.entity["boat"]["id"]
         )
         boat.get_single_entity()
-        load = find_load_on_boat(boat.entity, lid)
+        load_boat = find_load_on_boat(boat.entity, lid)
         # updated that specific load on the boat
-        load.update(data)
+        load_boat.update(data)
         boat.update_only_single()
     make_self_link(load.entity["boat"], request.base_url, segment=2,
                    kind='boats')
@@ -104,8 +120,8 @@ def delete_and_update(load, lid):
             eid=load.entity["boat"]["id"]
         )
         boat.get_single_entity()
-        load = find_load_on_boat(boat.entity, lid)
-        boat.entity["loads"].remove(load)
+        load_boat = find_load_on_boat(boat.entity, lid)
+        boat.entity["loads"].remove(load_boat)
         boat.update_only_single()
     load.delete_entity()
     return '', 204

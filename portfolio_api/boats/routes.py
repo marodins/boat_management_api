@@ -7,11 +7,13 @@ from portfolio_api.utils.utilities import make_self_link, make_res, \
     find_load_on_boat, update_loads_on_boat
 from portfolio_api.utils.paginate import paginate
 from portfolio_api.auth.validate import validating
+from portfolio_api.utils.headers_validate import accept_validate_parent
 
 bp = Blueprint('boats', __name__, url_prefix='/boats')
 
 
 @bp.route('', methods=["GET", "POST"])
+@accept_validate_parent()
 @validating(errors=True)
 def add_get_boat():
     res = Response()
@@ -63,8 +65,6 @@ def add_get_boat():
                 make_self_link(load, request.base_url, segment=1, kind='loads')
         for boat in data:
             make_self_link(boat, request.base_url)
-            make_self_link(boat["user"], request.base_url, segment=1,
-                           kind='users')
         res_data = {
             "self": request.url,
             "boats": data,
@@ -76,6 +76,7 @@ def add_get_boat():
 
 
 @bp.route('/<bid>', methods=["GET", "PUT", "PATCH", "DELETE"])
+@accept_validate_parent()
 @validating(errors=True)
 def get_mod_boat(bid):
     # modifying a boat that belongs to a user required jwt
@@ -170,6 +171,7 @@ def update_user_boats(user_id, boat):
 
 
 @bp.route('/<bid>/loads/<lid>', methods=["PUT", "DELETE"])
+@accept_validate_parent()
 @validating(errors=True)
 def add_remove_load(bid, lid):
     boat = DataAccess(kind='boat', namespace='boats', eid=bid)

@@ -1,4 +1,4 @@
-from flask import Response
+from flask import Response, request
 import json
 
 
@@ -16,4 +16,12 @@ def any_error(err):
     res.content_type = 'application/json'
     return res
 
+
+def method_error(err):
+    res = Response()
+    res.status_code = err.code
+    res.data = json.dumps({"error": f"{request.method} method not allowed for "
+                                    f"this url"})
+    res.content_type = 'application/json'
+    return res
 
