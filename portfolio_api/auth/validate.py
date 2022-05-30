@@ -52,6 +52,7 @@ def validating(errors=False):
                 # will only be set if no exceptions raised prior
                 # indicating successful payload retrieval
                 g.jwt_payload = payload
+                g.error = None
             except jwt.ExpiredSignatureError:
                 error = Halt("expired token", 401)
             except jwt.JWTClaimsError as e:

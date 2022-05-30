@@ -107,8 +107,9 @@ def update_loads_boat(load, lid):
         # updated that specific load on the boat
         load_boat.update(data)
         boat.update_only_single()
-    make_self_link(load.entity["boat"], request.base_url, segment=2,
-                   kind='boats')
+        make_self_link(load.entity["boat"], request.base_url, segment=2,
+                       kind='boats')
+    load.entity["self"] = request.url
     return make_res(load.entity, 200)
 
 
