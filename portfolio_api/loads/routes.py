@@ -53,6 +53,7 @@ def add_get_loads():
 
 
 @bp.route('/<lid>', methods=["GET", "PUT", "PATCH", "DELETE"])
+@accept_validate_parent()
 @validating()
 def specific_load(lid):
     load = DataAccess(kind='load', namespace='loads', eid=lid)

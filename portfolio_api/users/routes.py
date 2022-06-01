@@ -2,10 +2,12 @@ from flask import Blueprint, request
 from db.google_db import DataAccess
 from portfolio_api.utils.paginate import paginate
 from portfolio_api.utils.utilities import make_self_link, make_res
+from portfolio_api.utils.headers_validate import accept_validate_parent
 bp = Blueprint('users', __name__, url_prefix='/users')
 
 
 @bp.route('', methods=["GET"])
+@accept_validate_parent()
 def get_all():
     users = DataAccess(kind='user', namespace='users')
     data = users.get_all()

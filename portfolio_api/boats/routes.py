@@ -1,5 +1,5 @@
 import json
-
+from copy import deepcopy
 from flask import Blueprint, request, Response, g
 from db.google_db import DataAccess
 from portfolio_api.utils.errors import Halt
@@ -46,7 +46,7 @@ def add_get_boat():
         boat.entity["id"] = boat.entity.id
         # get user in db and update boats property
         user.entity = list(user.get_all_filtered([('sub', '=', sub)])).pop()
-        boat_data = boat.entity.copy()
+        boat_data = deepcopy(boat.entity)
         # only add data on boats to user
         boat_data.pop('loads')
         user.entity["boats"].append(boat_data)
@@ -85,7 +85,6 @@ def get_mod_boat(bid):
     try:
         # ensure boat exists
         boat.get_single_entity()
-        boat.entity["id"] = boat.entity.id
     except ValueError:
         raise Halt('boat or load does not exist', 404)
     # ensure valid jwt and boat belongs to user with jwt
@@ -109,6 +108,7 @@ def get_mod_boat(bid):
 
     if request.method == 'PUT':
         data = request.json
+        print(data)
         boat_name = data.get('name')
         name_exists(boat_name, boat.entity["name"])
         boat.update_only_single(data)
@@ -118,6 +118,7 @@ def get_mod_boat(bid):
         name_exists(boat_name, boat.entity["name"])
         boat.update_only_single(data)
 
+    boat.entity["id"] = boat.entity.id
     update_loads_boat(boat)
     update_user_boats(user_id, boat)
     boat.entity["self"] = request.url
@@ -128,7 +129,7 @@ def get_mod_boat(bid):
 
 def name_exists(boat_name, cur_name):
     # if name to be changed
-    if boat_name != cur_name:
+    if boat_name != cur_name and boat_name is not None:
         is_boat = DataAccess(kind='boat', namespace='boats')
         result = list(is_boat.get_all_filtered([('name', '=', boat_name)]))
         if len(result) > 0:
@@ -137,7 +138,7 @@ def name_exists(boat_name, cur_name):
 
 def update_loads_boat(boat):
 
-    load_boat_ob = boat.entity.copy()
+    load_boat_ob = deepcopy(boat.entity)
     load_boat_ob.pop('loads')
     all_loads = update_loads_on_boat(boat.entity["loads"])
 
@@ -157,7 +158,7 @@ def update_loads_boat(boat):
 
 
 def update_user_boats(user_id, boat):
-    boat_entity = boat.entity.copy()
+    boat_entity = deepcopy(boat.entity)
     user = DataAccess(kind='user', namespace='users')
     user.entity = list(user.get_all_filtered([('sub', '=', user_id)])).pop()
     for index, cur in enumerate(user.entity["boats"]):
@@ -176,14 +177,17 @@ def update_user_boats(user_id, boat):
 def add_remove_load(bid, lid):
     boat = DataAccess(kind='boat', namespace='boats', eid=bid)
     load = DataAccess(kind='load', namespace='loads', eid=lid)
+    user_id = g.jwt_payload["sub"]
     try:
         # ensure both boat and load exist
         boat.get_single_entity()
         load.get_single_entity()
-        load.entity["id"] = load.entity.id
-        boat.entity["id"] = boat.entity.id
     except ValueError:
         raise Halt('boat or load does not exist', 404)
+
+    # ensure valid jwt and boat belongs to user with jwt
+    if boat.entity["user"] != user_id:
+        raise Halt('user is not authorized to access this boat', 401)
 
     if request.method == 'PUT':
 
@@ -200,7 +204,7 @@ def add_remove_load(bid, lid):
 
         boat.update_only_single({"loads": all_loads})
         load.update_only_single({"boat": {
-            "id": boat.entity["id"],
+            "id": boat.entity.id,
             "name": boat.entity["name"],
             "type": boat.entity["type"],
             "length": boat.entity["length"]
@@ -225,6 +229,8 @@ def add_remove_load(bid, lid):
         segment=4,
         kind='loads'
     )
+    load.entity["id"] = load.entity.id
+    boat.entity["id"] = boat.entity.id
     boat.entity["self"] = request.url
     return make_res(boat.entity, 200)
 
