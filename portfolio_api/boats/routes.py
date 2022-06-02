@@ -86,7 +86,7 @@ def get_mod_boat(bid):
         # ensure boat exists
         boat.get_single_entity()
     except ValueError:
-        raise Halt('boat or load does not exist', 404)
+        raise Halt('a boat with this boat id does not exist', 404)
     # ensure valid jwt and boat belongs to user with jwt
     if boat.entity["user"] != user_id:
         raise Halt('user is not authorized to access this boat', 401)

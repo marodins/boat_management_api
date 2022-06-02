@@ -75,7 +75,7 @@ def specific_load(lid):
                                'boat owner', 401)
             # if error exists
             else:
-                raise Halt('this load is on a boat, please provide auth '
+                raise Halt('this load is on a boat, please provide valid auth '
                            'token', 401)
         if request.method == 'PUT' or request.method == 'PATCH':
             res = update_loads_boat(load, lid)
