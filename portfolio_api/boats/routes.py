@@ -199,7 +199,7 @@ def add_remove_load(bid, lid):
             "id": load.entity.id,
             "type": load.entity["type"],
             "weight": load.entity["weight"],
-            "length": load.entity["length"],
+            "volume": load.entity["volume"],
         })
 
         boat.update_only_single({"loads": all_loads})

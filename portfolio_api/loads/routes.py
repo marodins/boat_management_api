@@ -19,12 +19,12 @@ def add_get_loads():
         try:
             load_type = data["type"]
             weight = data["weight"]
-            length = data["length"]
+            volume = data["volume"]
 
             load.add_entity({
                 "type": load_type,
                 "weight": weight,
-                "length": length,
+                "volume": volume,
                 "boat": None
             })
             load.entity["id"] = load.entity.id
