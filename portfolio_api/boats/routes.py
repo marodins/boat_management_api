@@ -108,7 +108,6 @@ def get_mod_boat(bid):
 
     if request.method == 'PUT':
         data = request.json
-        print(data)
         boat_name = data.get('name')
         name_exists(boat_name, boat.entity["name"])
         boat.update_only_single(data)

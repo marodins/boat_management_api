@@ -3,6 +3,7 @@ from portfolio_api.utils.utilities import make_next_link
 
 
 def paginate(entry, use_filter: list = None):
+    """ get paginated entities from db and quantity """
     link = None
     limit = int(request.args.get('limit', 5))
     page_token = request.args.get('page_token', None)
